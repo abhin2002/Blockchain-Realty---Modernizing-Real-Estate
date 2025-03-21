@@ -13,7 +13,9 @@ import DialogActions from '@material-ui/core/DialogActions';
 import DialogContent from '@material-ui/core/DialogContent';
 import DialogTitle from '@material-ui/core/DialogTitle';
 import Slide from '@material-ui/core/Slide';
+import Web3 from 'web3';
 
+// Slide animation for dialogs
 const Transition = React.forwardRef(function Transition(props, ref) {
   return <Slide direction="up" ref={ref} />;
 });
@@ -25,7 +27,7 @@ const columns = [
   { id: 'laddress', label: 'Land Details', minWidth: 170 },
   { id: 'lstate', label: 'State', minWidth: 100 },
   { id: 'lcity', label: 'City', minWidth: 100 },
-  { id: 'lamount', label: 'Total Amount (Rs)', minWidth: 100 },
+  { id: 'lamount', label: 'Total Amount (ETH)', minWidth: 100 },
   { id: 'document', label: 'Documents', minWidth: 100 },
   { id: 'images', label: 'Land Images', minWidth: 100 },
   { id: 'isGovtApproved', label: 'Govt. Approval Status', minWidth: 100 },
@@ -44,54 +46,87 @@ class TableComponent extends Component {
     super(props);
     this.state = {
       assetList: [],
-      open1: false,
       openImageDialog: false,
+      openTransactionDialog: false,
       images: [],
+      selectedProperty: null,
+      transactionDetails: null,
     };
   }
 
-  // Load properties from local storage and filter only available ones
+  // Load available properties from local storage
   componentDidMount = () => {
     const storedProperties = JSON.parse(localStorage.getItem('propertyData')) || [];
+    const availableProperties = storedProperties.filter((property) => property.isAvailable === "Yes");
 
-    // Filter out properties that are not available
-    const availableProperties = storedProperties.filter(
-      (property) => property.isAvailable === "Yes"
-    );
-
-    this.setState({
-      assetList: availableProperties,
-    });
+    this.setState({ assetList: availableProperties });
   };
 
   // Handle property purchase request
-  handleRequestToBuy = (id) => {
-    this.setState((prevState) => {
-      const updatedList = prevState.assetList.map((property) =>
-        property.propertyId === id ? { ...property, isAvailable: "Requested" } : property
-      );
+  handleRequestToBuy = async (property) => {
+    if (!window.ethereum) {
+      alert("MetaMask not detected. Please install MetaMask.");
+      return;
+    }
 
-      localStorage.setItem('propertyData', JSON.stringify(updatedList));
+    const web3 = new Web3(window.ethereum);
+    try {
+      // Request account access
+      await window.ethereum.request({ method: 'eth_requestAccounts' });
 
-      return { assetList: updatedList.filter((property) => property.isAvailable === "Available") };
-    });
+      const accounts = await web3.eth.getAccounts();
+      const buyerAddress = accounts[0]; // The connected wallet
+
+      console.log("Buyer Address: ", buyerAddress);
+
+      // Mock transaction details
+      const mockTransaction = {
+        txHash: `0x${Math.random().toString(16).substr(2, 64)}`, // Mock Transaction Hash
+        blockNumber: Math.floor(Math.random() * 1000000),
+        gasUsed: Math.floor(Math.random() * 500000) + 21000,
+        buyerAddress,
+        amount: property.lamount, // ETH amount from property details
+      };
+
+      this.setState({
+        openTransactionDialog: true,
+        transactionDetails: mockTransaction,
+        selectedProperty: property,
+      });
+
+      // Update availability status locally
+      this.setState((prevState) => {
+        const updatedList = prevState.assetList.map((p) =>
+          p.propertyId === property.propertyId ? { ...p, isAvailable: "Requested" } : p
+        );
+
+        localStorage.setItem('propertyData', JSON.stringify(updatedList));
+
+        return { assetList: updatedList.filter((p) => p.isAvailable === "Yes") };
+      });
+    } catch (error) {
+      console.error("Transaction Error: ", error);
+      alert("Transaction failed.");
+    }
   };
 
   handleViewImages = (imageArray) => {
     if (imageArray && imageArray.length > 0) {
-      console.log("Images Received in handleViewImages:", imageArray); // Debugging Output
-  
       this.setState({
-        open1: true, // Open modal
-        images: [...imageArray], // Ensure images are set correctly
-      }, () => console.log("State Updated with Images: ", this.state.images)); // Debugging after state update
+        openImageDialog: true,
+        images: [...imageArray],
+      });
     } else {
       alert("No images available.");
     }
   };
 
   handleCloseImageDialog = () => {
-    this.setState({  open1: false, images: [] });
+    this.setState({ openImageDialog: false, images: [] });
+  };
+
+  handleCloseTransactionDialog = () => {
+    this.setState({ openTransactionDialog: false, transactionDetails: null });
   };
 
   render() {
@@ -124,28 +159,16 @@ class TableComponent extends Component {
                           ) : (
                             <span style={{ color: "gray" }}>No Document</span>
                           )
-                        ) : column.id === "images" ? (  // ✅ Correct placement for View Images
-                          row["imageBase64Array"] && row["imageBase64Array"].length > 0 ? (
-                            <Button
-                              variant="contained"
-                              color="primary"
-                              onClick={() => {
-                                console.log("Button Clicked for Row:", row.propertyId); // Debugging
-                                console.log("Images Sent to handleViewImages:", row["imageBase64Array"]); // Debugging
-                                this.handleViewImages(row["imageBase64Array"]);
-                              }}
-                            >
+                        ) : column.id === "images" ? (
+                          row.imageBase64Array && row.imageBase64Array.length > 0 ? (
+                            <Button variant="contained" color="primary" onClick={() => this.handleViewImages(row.imageBase64Array)}>
                               View Images
                             </Button>
                           ) : (
                             <span style={{ color: "gray" }}>No Images</span>
                           )
                         ) : column.id === "isAvailable" ? (
-                          <Button
-                            variant="contained"
-                            color="primary"
-                            onClick={() => this.handleRequestToBuy(row.propertyId)}
-                          >
+                          <Button variant="contained" color="primary" onClick={() => this.handleRequestToBuy(row)}>
                             Request to Buy
                           </Button>
                         ) : column.id === "actions" ? (
@@ -154,9 +177,7 @@ class TableComponent extends Component {
                             color="secondary"
                             onClick={() =>
                               this.setState((prevState) => ({
-                                assetList: prevState.assetList.filter(
-                                  (property) => property.propertyId !== row.propertyId
-                                ),
+                                assetList: prevState.assetList.filter((property) => property.propertyId !== row.propertyId),
                               }))
                             }
                           >
@@ -175,42 +196,36 @@ class TableComponent extends Component {
         </TableContainer>
 
         {/* Image Dialog */}
-         {/* ✅ Add the Dialog Modal Here (After TableContainer) */}
-              <Dialog
-                open={this.state.open1}
-                onClose={this.handleCloseImageDialog}
-                aria-labelledby="alert-dialog-title"
-                aria-describedby="alert-dialog-description"
-                maxWidth="md"
-                fullWidth
-              >
-                <DialogTitle id="alert-dialog-title">View Images</DialogTitle>
-                <DialogContent dividers>
-                  {this.state.images.length > 0 ? (
-                    this.state.images.map((image, index) => (
-                      <img
-                        key={index}
-                        src={image} // Display Base64 images correctly
-                        alt={`Uploaded Image ${index + 1}`}
-                        style={{
-                          width: "100%",
-                          maxHeight: "400px",
-                          display: "block",
-                          marginBottom: "10px",
-                          objectFit: "contain",
-                        }}
-                      />
-                    ))
-                  ) : (
-                    <p style={{ color: "red" }}>No images available</p>
-                  )}
-                </DialogContent>
-                <DialogActions>
-                  <Button onClick={this.handleCloseImageDialog} color="primary">
-                    Close
-                  </Button>
-                </DialogActions>
-              </Dialog>
+        <Dialog open={this.state.openImageDialog} onClose={this.handleCloseImageDialog} maxWidth="md" fullWidth>
+          <DialogTitle>View Images</DialogTitle>
+          <DialogContent dividers>
+            {this.state.images.map((image, index) => (
+              <img key={index} src={image} alt={`Uploaded ${index + 1}`} style={{ width: "100%", maxHeight: "400px", objectFit: "contain" }} />
+            ))}
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={this.handleCloseImageDialog} color="primary">Close</Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Transaction Dialog */}
+        <Dialog open={this.state.openTransactionDialog} onClose={this.handleCloseTransactionDialog} maxWidth="sm" fullWidth>
+          <DialogTitle>Transaction Details</DialogTitle>
+          <DialogContent dividers>
+            {this.state.transactionDetails && (
+              <div>
+                <p><b>Transaction Hash:</b> {this.state.transactionDetails.txHash}</p>
+                <p><b>Block Number:</b> {this.state.transactionDetails.blockNumber}</p>
+                <p><b>Gas Used:</b> {this.state.transactionDetails.gasUsed}</p>
+                <p><b>Buyer Address:</b> {this.state.transactionDetails.buyerAddress}</p>
+                <p><b>Amount:</b> {this.state.transactionDetails.amount} ETH</p>
+              </div>
+            )}
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={this.handleCloseTransactionDialog} color="primary">Close</Button>
+          </DialogActions>
+        </Dialog>
       </Paper>
     );
   }
