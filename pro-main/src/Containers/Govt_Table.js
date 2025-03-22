@@ -177,13 +177,14 @@ class TableComponent extends Component {
                           </div>
                         ) :
                          column.id === 'isAvailable' ? (
-                          <Button
-                            variant="contained"
-                            color="primary"
-                            onClick={() => this.handleRequestToBuy(row.propertyId)}
-                          >
-                            Request to Buy
-                          </Button>
+                          // <Button
+                          //   variant="contained"
+                          //   color="primary"
+                          //   onClick={() => this.handleRequestToBuy(row.propertyId)}
+                          // >
+                          //   Request to Buy
+                          // </Button>
+                          <span>{row.isAvailable}</span>
                         ) : column.id === 'actions' ? (
                           <Button
                             variant="contained"

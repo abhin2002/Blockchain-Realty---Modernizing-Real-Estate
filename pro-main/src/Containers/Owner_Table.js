@@ -52,6 +52,7 @@ class TableComponent extends Component {
     super(props);
     this.state = {
       assetList: [], // State to hold the list of assets
+      openTransactionDialog: false,
       isLoading: true,
       open: false,
       open1: false,
@@ -176,22 +177,50 @@ class TableComponent extends Component {
       })
     window.location.reload()
   }
-  handleRequesterInfo = async (address) => {
-    this.setState({ open: true })
-    const user = await this.state.landList.methods.getUser(address).call()
-
-    if (user) {
+  handleRequesterInfo = (address) => {
+    // Open the user info dialog
+    this.setState({ open: true });
+  
+    // Get property/requester data from localStorage
+    const propertyData = JSON.parse(localStorage.getItem('propertyData')) || [];
+  
+    // Find property with matching requester address
+    const matchingProperty = propertyData.find(
+      (property) => property.requester?.toLowerCase() === address.toLowerCase()
+    );
+  
+    if (matchingProperty) {
+      const user = {
+        uid: matchingProperty.uid || "N/A",
+        uname: matchingProperty.uname || "N/A",
+        ucontact: matchingProperty.ucontact || "N/A",
+        uemail: matchingProperty.uemail || "N/A",
+        ucode: matchingProperty.ucode || "N/A",
+        ucity: matchingProperty.ucity || "N/A",
+      };
+  
+      // Mock transaction details
+      const mockTransaction = {
+        txHash: `0x${Math.random().toString(16).substr(2, 64)}`,
+        blockNumber: Math.floor(Math.random() * 1000000),
+        gasUsed: Math.floor(Math.random() * 500000) + 21000,
+        buyerAddress: address,
+        amount: matchingProperty.lamount || 0,
+      };
+  
+      // Set both user and transaction data to state
       this.setState({
-        uid: user[0],
-        uname: user[1],
-        ucontact: user[2],
-        uemail: user[3],
-        ucode: user[4],
-        ucity: user[5],
-        exist: user[6],
-      })
+        ...user,
+        exist: true,
+        openTransactionDialog: true,
+        transactionDetails: mockTransaction,
+        selectedProperty: matchingProperty,
+      });
+    } else {
+      alert("No requester info found for this address.");
     }
-  }
+  };
+  
   handleClose = () => {
     this.setState({ open: false })
   }
@@ -215,6 +244,10 @@ class TableComponent extends Component {
   handleClose1 = () => {
     console.log("Closing modal..."); // Debugging output
     this.setState({ open1: false, images: [] });
+  };
+
+  handleCloseTransactionDialog = () => {
+    this.setState({ openTransactionDialog: false, transactionDetails: null });
   };
   
 
@@ -396,6 +429,25 @@ class TableComponent extends Component {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Transaction Dialog */}
+              <Dialog open={this.state.openTransactionDialog} onClose={this.handleCloseTransactionDialog} maxWidth="sm" fullWidth>
+                <DialogTitle>Transaction Details</DialogTitle>
+                <DialogContent dividers>
+                  {this.state.transactionDetails && (
+                    <div>
+                      <p><b>Transaction Hash:</b> {this.state.transactionDetails.txHash}</p>
+                      <p><b>Block Number:</b> {this.state.transactionDetails.blockNumber}</p>
+                      <p><b>Gas Used:</b> {this.state.transactionDetails.gasUsed}</p>
+                      <p><b>Buyer Address:</b> {this.state.transactionDetails.buyerAddress}</p>
+                      <p><b>Amount:</b> {this.state.transactionDetails.amount} ETH</p>
+                    </div>
+                  )}
+                </DialogContent>
+                <DialogActions>
+                  <Button onClick={this.handleCloseTransactionDialog} color="primary">Close</Button>
+                </DialogActions>
+              </Dialog>
       </Paper>
       
     );
@@ -818,4 +870,3 @@ export default withStyles(styles)(TableComponent);
 // }
 
 // export default withStyles(styles)(TableComponent);
-
