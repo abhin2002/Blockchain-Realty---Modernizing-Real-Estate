@@ -97,7 +97,7 @@ class TableComponent extends Component {
       // Update availability status locally
       this.setState((prevState) => {
         const updatedList = prevState.assetList.map((p) =>
-          p.propertyId === property.propertyId ? { ...p, requester: "Requested" } : p
+          p.propertyId === property.propertyId ? { ...p, requester: buyerAddress } : p
         );
 
         localStorage.setItem('propertyData', JSON.stringify(updatedList));
