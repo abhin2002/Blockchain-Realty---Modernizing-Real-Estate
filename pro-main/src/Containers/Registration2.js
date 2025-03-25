@@ -35,6 +35,7 @@ class Register extends Component {
       images: [],
       imageHashes: [],
       checked: false,
+      ownerWallet: '', // ✅ New state for wallet address
     };
   }
 
@@ -146,7 +147,7 @@ class Register extends Component {
     return (
       <Container style={{ marginTop: '30px' }}>
         <h1 style={{ textAlign: 'center', fontWeight: '600' }}>Owner's Details</h1>
-
+        <TextField label="Owner Wallet Address" fullWidth margin="normal" onChange={this.handleChange('ownerWallet')} />
         <TextField label="Owner's Name" fullWidth margin="normal" onChange={this.handleChange('name')} />
         <TextField label="Email ID" fullWidth margin="normal" onChange={this.handleChange('email')} />
         <TextField label="Contact Number" fullWidth margin="normal" onChange={this.handleChange('contact')} />

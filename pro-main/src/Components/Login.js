@@ -1,33 +1,72 @@
 import React, { Component } from 'react';
 import Web3 from 'web3';
-import Button from '@material-ui/core/Button';
-import { Container } from '@material-ui/core';
+import {
+  Container,
+  Button,
+  TextField,
+  Typography,
+  Paper,
+  Grid,
+} from '@material-ui/core';
 import SendIcon from '@material-ui/icons/Send';
 import { withStyles } from '@material-ui/core/styles';
 
-const styles = () => ({
-  
-  root: {   
-    position: 'absolute',
-    top: '50%',
-    left: '50%',
-    transform: 'translate(-50%,-50%)',
-    '& .MuiButton-containedPrimary': {
-      backgroundColor: '#328888',
-      fontFamily: "'Roboto Condensed', sans-serif",
+const styles = (theme) => ({
+  root: {
+    height: '100vh',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    background: 'linear-gradient(135deg, #e0f7fa 0%, #80cbc4 100%)',
+  },
+  paper: {
+    padding: theme.spacing(6),
+    maxWidth: 400,
+    width: '100%',
+    textAlign: 'center',
+    borderRadius: '16px',
+    boxShadow: '0 10px 30px rgba(0,0,0,0.1)',
+  },
+  title: {
+    fontFamily: "'Roboto Condensed', sans-serif",
+    fontSize: '1.8rem',
+    fontWeight: 'bold',
+    marginBottom: theme.spacing(4),
+    color: '#004d40',
+  },
+  button: {
+    marginTop: theme.spacing(2),
+    backgroundColor: '#328888',
+    color: '#fff',
+    fontFamily: "'Roboto Condensed', sans-serif",
+    '&:hover': {
+      backgroundColor: '#256b6b',
     },
+  },
+  orText: {
+    margin: theme.spacing(4, 0, 2),
+    fontFamily: "'Roboto Condensed', sans-serif",
+    color: '#555',
+  },
+  textField: {
+    marginTop: theme.spacing(1),
   },
 });
 
 class Login extends Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      manualAddress: '',
+    };
+  }
+
   connectMetaMask = async () => {
     if (window.ethereum) {
       try {
-        // Request MetaMask connection
         const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
         const account = accounts[0];
 
-        // Store account & redirect
         window.localStorage.setItem('web3account', account);
         window.location = '/dashboard';
       } catch (error) {
@@ -39,24 +78,44 @@ class Login extends Component {
     }
   };
 
+  handleManualAddressChange = (event) => {
+    const manualAddress = event.target.value;
+    this.setState({ manualAddress });
+    localStorage.setItem('manualAddress', manualAddress);
+  };
+
   render() {
     const { classes } = this.props;
-    return (
-      <div className="profile-bg">
-        <Container className={classes.root}>
-          <div className="login-text">User Login</div>
+    const { manualAddress } = this.state;
 
-          <div style={{ marginTop: '20px', textAlign: 'center' }}>
-            <Button
-              variant="contained"
-              color="primary"
-              endIcon={<SendIcon />}
-              onClick={this.connectMetaMask}
-            >
-              Login with MetaMask
-            </Button>
-          </div>
-        </Container>
+    return (
+      <div className={classes.root}>
+        <Paper className={classes.paper} elevation={3}>
+          <Typography className={classes.title}>User Login</Typography>
+
+          <Button
+            variant="contained"
+            className={classes.button}
+            endIcon={<SendIcon />}
+            onClick={this.connectMetaMask}
+            fullWidth
+          >
+            Login with MetaMask
+          </Button>
+
+          <Typography variant="body1" className={classes.orText}>
+            Or enter your wallet address manually
+          </Typography>
+
+          <TextField
+            className={classes.textField}
+            variant="outlined"
+            label="Wallet Address"
+            value={manualAddress}
+            onChange={this.handleManualAddressChange}
+            fullWidth
+          />
+        </Paper>
       </div>
     );
   }

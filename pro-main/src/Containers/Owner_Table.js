@@ -78,20 +78,24 @@ class TableComponent extends Component {
 
   componentDidMount = () => {
     const storedProperties = JSON.parse(localStorage.getItem('propertyData')) || [];
-    
-    // Inject mock property IDs if missing
-  const updatedProperties = storedProperties.map((property, index) => ({
-    ...property,
-    propertyId: property.propertyId || `P00${index + 1}`, 
-    isAvailable: property.isAvailable || "No", // Default to "No" if missing
-  }));
+    const manualAddress = localStorage.getItem('manualAddress')?.toLowerCase();
   
-
+    const filteredProperties = storedProperties
+      .filter((property) =>
+        property.ownerWallet?.toLowerCase() === manualAddress
+      )
+      .map((property, index) => ({
+        ...property,
+        propertyId: property.propertyId || `P00${index + 1}`,
+        isAvailable: property.isAvailable || "No",
+      }));
+  
     this.setState({
-      assetList: updatedProperties, // Load saved properties into the table
+      assetList: filteredProperties,
       isLoading: false,
     });
   };
+  
   
   
 
